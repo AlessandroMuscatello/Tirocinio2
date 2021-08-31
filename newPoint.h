@@ -2,7 +2,7 @@
 #include <opencv2/core.hpp>
 using namespace cv;
 
-bool isSeedingPoint(Point p, Mat& image, Mat& finalImage, Mat& medianLenght, Mat& O);
+bool isSeedingPoint(Point p, Mat& image);
 
 bool retracingCheck(Point p, Mat& finalImage, double angle, int localLenght);
 

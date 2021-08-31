@@ -155,11 +155,13 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ridge.cpp" />
     <ClCompile Include="newPoint.cpp" />
+    <ClCompile Include="tracing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="improveImage.h" />
     <ClInclude Include="newPoint.h" />
     <ClInclude Include="Ridge.h" />
+    <ClInclude Include="tracing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

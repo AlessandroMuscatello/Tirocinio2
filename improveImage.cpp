@@ -59,7 +59,7 @@ Mat getMedianWaveLenght() {
 	return medianLenght;
 }
 
-//funzione che recupera l'Oriented field (per il main)
+//funzione che recupera l'Oriented field
 Mat getOrientedField() {
 	Mat g = normalizedImage();
 	return orientedField2(g);
@@ -298,7 +298,8 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 			double remeber = fourier.at<double>(0);
 			fourier.at<double>(0) = 0;
 
-			int maxIndex = 0, maxValue = -9999;
+			int maxIndex = 0;
+			double maxValue = -9999;
 			for (int index = 0; index < fourier.size[0]; index++) {
 				if (fourier.at<double>(index) > maxValue) {
 					maxValue = fourier.at<double>(index);
@@ -309,7 +310,7 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 
 			
 			for (int s = 0; s < 32; s++)
-				if((s < (maxIndex - 1) || s >(maxIndex + 3)) || (s == 2 * maxIndex))
+				if((s < (maxIndex - 1) || s > (maxIndex + 3)) || (s == 2 * maxIndex))
 					fourier.at<double>(s) = 0;
 			
 			dft(fourier, fourier, DFT_INVERSE);
@@ -458,13 +459,13 @@ void printField(string windowName, Mat& O) {
 }
 
 //funzione che stampa i livelli di grigio della xSignature (per debug)
-//@param xSig = matrice della xSignature
+//@param xSig = matrice della xSignature (dell'intera immagine)
 //@param O = matrice delle direzioni
 //@param g = immagine normalizzata
 void print_xSig(Mat& xSig, Mat& O, Mat& g) {
 	
 	Mat out(1, 32, CV_64F);
-	int length = 5;
+	int length = 5; //lunghezza del vettore che indica la direzione
 	for (int i = 0; i < 17; i++) {
 		for (int j = 0; j < 11; j++) {
 			for (int k = 0; k < xSig.size[2]; k++) {
