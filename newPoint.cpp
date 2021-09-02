@@ -29,13 +29,13 @@ bool isSeedingPoint(Point p, Mat& finalImage) {
 		return false;
 
 	int localLenght = medianLenght.at<double>(p.y / 16, p.x / 16);
-	double angle = O.at<double>(p.y / 16, p.x / 16) / M_PI * 180;
+	double angle = O.at<double>(p.y / 16, p.x / 16);
 	
 	if (retracingCheck(p, finalImage, angle, localLenght)) {
 		
-		//if (regionQualityCheck(p, angle, localLenght))
+		if (regionQualityCheck(p, angle, localLenght))
 			return true;
-		cout << "region quality NOT pass" << endl;
+		//cout << "region quality NOT pass" << endl;
 	}
 	
 	return false;
@@ -43,11 +43,10 @@ bool isSeedingPoint(Point p, Mat& finalImage) {
 
 //funzione per effettuare il retracingCheck
 bool retracingCheck(Point p, Mat& finalImage, double angle, int localLenght) {
-	Mat omega = getOmega(p, angle, Size(localLenght, localLenght)); //finestra orientata sul punto p
-	Mat omega_ = getOmega_(omega); //finestra orientata binarizzata
+	Mat omega = getOmega(p, angle, Size(localLenght, localLenght)); //finestra orientata sul punto p dall'immagine filtrata
+	Mat omega_ = getOmega_(omega); //finestra orientata binarizzata 
 	Mat omegaT = getOmegaT(p, finalImage, angle, localLenght); //finestra orientata sul punto p dalla matrice finale
-
-	multiply(omega_, omegaT, omega);
+	multiply(omega_, omegaT, omega); //moltiplica le prime due matrici elemento per elemento e lo scrive sulla terza
 
 	int T = 0;
 	for (auto it = omega.begin<uchar>(), end = omega.end<uchar>(); it != end; ++it)
@@ -61,7 +60,8 @@ bool retracingCheck(Point p, Mat& finalImage, double angle, int localLenght) {
 
 //funzione che controlla la regione adiacente al punto per stabilire se si trova su una ridge non 
 bool regionQualityCheck(Point p, double angle, int localLenght) {
-	Mat omega = 255 - getOmega(p, angle, Size(5 * localLenght , localLenght)); //i neri sono le valli e i bianchi sono le ridges
+	
+	Mat omega = 255 - getOmega(p, angle, Size(5 * localLenght, localLenght)); //i neri sono le valli e i bianchi sono le ridges
 	Mat xSig = getNormXSig(omega); //xSignature della finestra orientata
 	
 	//vedi https://docs.opencv.org/4.5.0/d8/d01/tutorial_discrete_fourier_transform.html per come si calcola il Power Spectrum
@@ -80,7 +80,7 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 	double maxVal = 0; 
 	int max = 0; //indice del picco massimo di frequenza
 	for (int i = 1; i < fourier.size[0]; ++i)
-		if (fourier.at<double>(i) > maxVal) {
+		if (abs(fourier.at<double>(i)) > maxVal) {
 			max = i;
 			maxVal = fourier.at<double>(i);
 		}
@@ -102,18 +102,27 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 	namedWindow("omega", WINDOW_FREERATIO);
 	resizeWindow("omega", 250, 100);
 	imshow("omega", omega);
+	cout << "max = " << max << endl;
 	*/
+	int n = floor(max / 2);
+	//cout << "n = " << n << endl;
 	
-	if (max - 2 > 0) {
+	if (n - 2 > 0) {
 		double den = 0; //denominatore per calcolare l'harnomic ratio
-		for (int i = 0; i <= max - 2; i++) //trova il valore massimo che abbia indice minore di max - 2 e lo mette come denominatore per il HR
+		for (int i = 0; i <= n - 2; i++) //trova il valore massimo che abbia indice minore di max - 2 e lo mette come denominatore per il HR
 			if (PS.at<double>(i) > den)
 				den = PS.at<double>(i);
 		if (den == 0)
 			return false;
+		
+		double num = 0;
+		for (int i = n - 1; i <= n + 3; i++) //trova il valore massimo che abbia indice minore di max - 2 e lo mette come denominatore per il HR
+			if (PS.at<double>(i) > den)
+				num = PS.at<double>(i);
 
-		double HR = PS.at<double>(max) / den; //harmonic ratio
-		//cout << "HR = " << PS.at<double>(max) << " / " << den << " = " << HR << endl;
+
+		double HR = num / den; //harmonic ratio
+		//cout << "HR = " << num << " / " << den << " = " << HR << endl;
 		//waitKey(0);
 		
 		if (HR > beta1) 
@@ -137,14 +146,14 @@ Mat getOmega(Point p, double angle, Size windowSize) {
 	Mat translation_matrix = Mat(2, 3, CV_32F, warp_values); //matrice di traslazione
 	warpAffine(filteredImage, translated_image, translation_matrix, filteredImage.size()); //effettuo la traslazione dell'immagine
 	
-	Mat rotation_matix = getRotationMatrix2D(center, - angle / M_PI_2 * 360 + 90, 1.0); //matrice di rotazione
+	Mat rotation_matix = getRotationMatrix2D(center, - angle / M_PI * 180 + 90, 1.0); //matrice di rotazione
 	warpAffine(translated_image, omega, rotation_matix, translated_image.size()); //effettuo la rotazione dell'immagine
 
 	Range rowRange(center.y - windowSize.height / 2, center.y + windowSize.height / 2 + 1),
 		  colRange(center.x - windowSize.width  / 2, center.x + windowSize.width  / 2 + 1); //range per il taglio (il +1 alla fine è perchè l'ultima riga / colonna non viene inclusa quindi va aggiunta a mano)
 	omega(rowRange, colRange).copyTo(omega); //effettua il taglio
 	
-	/*
+											 /*
 	//DEBUG
 	cout << "rowRange = " << rowRange << endl;
 	cout << "colrange = " << colRange << endl;
@@ -197,7 +206,7 @@ Mat getOmegaT(Point p, Mat finalImage, double angle, int localLenght) {
 	Mat translation_matrix = Mat(2, 3, CV_32F, warp_values); //matrice di traslazione
 
 	warpAffine(finalImage, translated_image, translation_matrix, finalImage.size()); //effettuo la traslazione dell'immagine
-	Mat rotation_matix = getRotationMatrix2D(center, -angle + 90, 1.0); //matrice di rotazione
+	Mat rotation_matix = getRotationMatrix2D(center, -angle * 180 / M_PI + 90, 1.0); //matrice di rotazione
 
 	//cout << "locallenght = " << localLenght << endl;
 	warpAffine(translated_image, omega, rotation_matix, translated_image.size()); //effettuo la rotazione dell'immagine

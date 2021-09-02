@@ -24,3 +24,5 @@ int getFourierMaxIndex(cv::Mat& fourier);
 cv::Mat getPowerSpectrum(cv::Mat& xSig);
 
 void drawRidges(cv::Mat& finalImage, std::list<cv::Point>& newPoints, std::list<double>& waveLenghts);
+
+void drawRidges2(cv::Mat& finalImage, std::list<cv::Point>& newPoints, std::list<double>& waveLenghts);

@@ -341,7 +341,7 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 			}
 
 			if (maxs.size() == 0)
-				medWave.at<double>(i, j) = -1; //se non sono rilevati massimi allora si imposta un valore arbitrario
+				medWave.at<double>(i, j) = 1; //se non sono rilevati massimi allora si imposta un valore arbitrario
 			else {
 				double med = (double)sum / maxs.size();
 				if (med < 1)
