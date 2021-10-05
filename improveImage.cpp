@@ -24,37 +24,25 @@ Mat getMedianWaveLenght() {
 	Mat g = normalizedImage(); //immagine normalizzata (CV_8UC1)
 	cout << "calcolata la normImage" << endl;
 
-	//imshow("g", g);
-
 	Mat O = orientedField2(g); //matrice di orientazione delle ridges (il valore dell'orientazione è nel centro dei blocchi 16x16) (CV_64F)
 	cout << "calcolato l'orientedField" << endl;
 
 	Mat xSig = xSignature3(g, O); //matrice che contiene tutte le xSignature per ogni blocco 16x16. Dimensioni della matrice = [g.rows / dim, g.cols / dim, 32] (CV_64F)
 	cout << "calcolato la xSignature " << endl;
 
-	Mat medianLenght = medianWavelenght(xSig);
+	Mat medianLenght = medianWavelenght2(xSig);
 	cout << "calcolato la medianLenght " << endl;
 
-
-
-
-
 	/*
-	Mat O = orientedField2_total(g); //matrice di orientazione delle ridges (il valore dell'orientazione è nel centro dei blocchi 16x16) (CV_64F)
-	cout << "calcolato l'orientedField" << endl;	
+	//DEBUG
+	imshow("g", g);	
 
-	Mat freq = getFrequency();
-	imshow("filtered", filter_ridge(g, O, freq));
+	printField("O", O);
 
+	print_xSig(xSig, O, g); //DEBUG
 	waitKey(0);
 	*/
 	
-
-
-
-	
-
-	//print_xSig(xSig, O, g); //DEBUG
 
 	return medianLenght;
 }
@@ -194,7 +182,7 @@ Mat orientedField2(Mat& g) {
 	return O;
 }
 
-/*funzione che calcola la xSignature per ogni blocco 16x16 che sia sufficientemente lontano dal bordo dell'immagine
+/*funzione che calcola la xSignature per ogni blocco 16x16 che sia sufficientemente lontano dal bordo dell'immagine (NON USATA)
 * @param g = immagine normalizzata
 * @param O = matrice di orientazione
 */
@@ -223,7 +211,7 @@ Mat xSignature2(Mat& g, Mat& O) {
 					
  					xSig.at<double>(i, j, k) += g.at<uchar>(x, y);
 				}
-				xSig.at<double>(i, j, k) = xSig.at<double>(i, j, k) / 16;
+				xSig.at<double>(i, j, k) /= 16;
 				//cout << "xSig (" << i << ", " << j << ", " << k << ") = " << xSig.at<double>(i, j, k) << endl;
 			}	
 		}
@@ -231,21 +219,27 @@ Mat xSignature2(Mat& g, Mat& O) {
 	return xSig;
 }
 
-//signature creata con una linea e l'iteratore della linea
+/*signature creata con una linea e l'iteratore della linea
+@param g = immagine normalizzata
+@param O = matrice di orientazione
+*/
 Mat xSignature3(Mat& g, Mat& O) {
 	int size[] = { g.rows / dim, g.cols / dim, 32 }; //dimensione della matrice della xSignature (prima e seconda dimensione uguali a quelle di O)
 	Mat xSig(3, size, CV_64F); //matrice della xSignature (dimensione (g.rows / 16) x (g.cols/ 16) x 32)
 	xSig = 0;
+	
 	/*
+	//DEBUG
 	Mat out(g.size(), CV_8U);
 	out = 0;
 	namedWindow("xsig", WINDOW_FREERATIO);
 	*/
-
+	
 	for (int i = 2; i < xSig.size[0] - 2; i++) { // i e j sono uguali a 2 per non leggere anche fuori dal bordo
 		for (int j = 2; j < xSig.size[1] - 2; j++) {
+			//out = 255; //debug
 			for (int k = 0; k < xSig.size[2]; k++) {
-
+				
 				double yBegin = (i * 16) + (k - 15.0) * cos(O.at<double>(i, j) ) + (-9) * sin(O.at<double>(i, j) );
 				double xBegin = (j * 16) + (k - 15.0) * sin(O.at<double>(i, j) ) - (-9) * cos(O.at<double>(i, j) );
 				double yEnd = (i * 16) + (k - 15.0) * cos(O.at<double>(i, j) ) + 9 * sin(O.at<double>(i, j) );
@@ -258,36 +252,99 @@ Mat xSignature3(Mat& g, Mat& O) {
 				//cout << "(begin, end) = (" << begin << ", " << end << ")  it.count = " <<it.count<< endl;
 				for (int v = 0; v < it.count; v++, ++it){
 					xSig.at<double>(i, j, k) +=  g.at<uchar>(it.pos());
-		
+					
 					/*
+					//DEBUG
 					//cout << "v = " << v <<"  p(x, y) = "<< it.pos() << endl;
 					out.at<uchar>(it.pos()) = originalImage.at<uchar>(it.pos());
 					imshow("xsig", out);
-					// da aggiungere il waitKey alla prossima riga
 					*/
-
+					
 				}
-				//waitKey(1);
+				//waitKey(1); //debug
 				if (it.count)
 					xSig.at<double>(i, j, k) /= it.count;
 				else
 					xSig.at<double>(i, j, k) = 0;
 			}
+			/*
+			imwrite("outLineIterator.bmp", out);
+			waitKey(0);//debug
+			*/
 		}
 	}
-
 	return xSig;
 }
 
-//media con fourier
+/*signature creata da una oriented window derivata dalla roto - traslazione della matrice g(NON USATA)
+@param g = immagine normalizzata
+@param O = matrice di orientazione
+*/
+Mat xSignature4(Mat& g, Mat& O) {
+	int size[] = { g.rows / dim, g.cols / dim, 32 }; //dimensione della matrice della xSignature (prima e seconda dimensione uguali a quelle di O)
+	Mat xSig(3, size, CV_64F); //matrice della xSignature (dimensione (g.rows / 16) x (g.cols/ 16) x 32)
+	xSig = 0;
+
+	for (int i = 2; i < xSig.size[0] - 2; i++) { // i e j sono uguali a 2 per non leggere anche fuori dal bordo
+		for (int j = 2; j < xSig.size[1] - 2; j++) {
+			Point center(j * 16 + 7, i * 16 + 7); //centro della finestra 16x16
+			double angle = O.at<double>(i, j);
+			Mat orientedWindow = getOrientedWindow(center, g, angle, Size(32, 16));
+			Mat v;
+			
+			for (int k = 0; k < 32; k++) {
+				for (int v = 0; v < 16; v++) {
+					xSig.at<double>(i, j, k) += orientedWindow.at<uchar>(v, k);
+				}
+				xSig.at<double>(i, j, k) /= 16;
+				v.push_back(xSig.at<double>(i, j, k));
+			}
+			/*
+			//DEBUG
+			CvPlot::Axes axes = CvPlot::plot(v, "-");
+			CvPlot::Window window("xSig", axes, 480, 640);
+			namedWindow("oriented", WINDOW_FREERATIO);
+			imshow("oriented", orientedWindow);
+			imshow("g", g);
+			waitKey(0);
+			
+			*/
+		}
+	}
+	return xSig;
+}
+
+//funzione per ottenere una finestra orientata di centro p
+Mat getOrientedWindow(Point p, Mat& g, double angle, Size windowSize) {
+	float tx, ty; //valori per la traslazione
+	Mat translated_image; //matrice traslata che deve essere ruotata
+	Mat omega; //finestra orientata
+	Point center(g.cols / 2, g.rows / 2); //centro della finestra
+
+	//valori per la traslazione
+	tx = center.x - p.x;
+	ty = center.y - p.y;
+	float warp_values[] = { 1, 0, tx, 0, 1, ty }; //valori per la matrice di traslazione
+	Mat translation_matrix = Mat(2, 3, CV_32F, warp_values); //matrice di traslazione
+	warpAffine(g, translated_image, translation_matrix, g.size()); //effettuo la traslazione dell'immagine
+
+	Mat rotation_matix = getRotationMatrix2D(center, (-angle / M_PI * 180) + 90, 1.0); //matrice di rotazione
+	warpAffine(translated_image, omega, rotation_matix, translated_image.size()); //effettuo la rotazione dell'immagine
+	Range rowRange(center.y - windowSize.height / 2, center.y + windowSize.height / 2 + 1),
+		colRange(center.x - windowSize.width / 2, center.x + windowSize.width / 2 + 1); //range per il taglio (il +1 alla fine è perchè l'ultima riga / colonna non viene inclusa nel Range quindi va aggiunta a mano)
+	omega(rowRange, colRange).copyTo(omega); //effettua il taglio
+	return omega;
+}
+
+//media con fourier e derivate (NON USATA)
 Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di fourier (NON COMPLETA)
-	Mat medWave(originalImage.rows / dim, originalImage.cols / dim, CV_64F);
+	Mat medWave(originalImage.rows / dim, originalImage.cols / dim, CV_64F); //matrice delle dimensioni medie calcolate (dimensione (originalImage.rows / 16) x (originalImage.cols/ 16))
 	int defaultLenght = 4;
 	medWave = defaultLenght;
 	
 	for (int i = 2; i < xSig.size[0] - 2; i++) {  //la xSig non è definita per i blocchi che sono distanti a meno di 2 dai limiti esterni
 		for (int j = 2; j < xSig.size[1] - 2; j++) {
-			Mat v;
+			Mat v; //vettore della xSig locale
 			for (int k = 0; k < xSig.size[2]; k++) {
 				v.push_back(xSig.at<double>(i, j, k));
 
@@ -295,12 +352,12 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 			//cout << "(i, j) = (" << i << ", " << j << ") v =" << v << endl;
 			Mat fourier;
 			dft(v, fourier);
-			double remeber = fourier.at<double>(0);
+			
 			fourier.at<double>(0) = 0;
 
-			int maxIndex = 0;
+			int maxIndex = 1;
 			double maxValue = -9999;
-			for (int index = 0; index < fourier.size[0]; index++) {
+			for (int index = 1; index < fourier.size[0]; index++) {
 				if (fourier.at<double>(index) > maxValue) {
 					maxValue = fourier.at<double>(index);
 					maxIndex = index;
@@ -313,7 +370,8 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 				if((s < (maxIndex - 1) || s > (maxIndex + 3)) || (s == 2 * maxIndex))
 					fourier.at<double>(s) = 0;
 			
-			dft(fourier, fourier, DFT_INVERSE);
+			Mat tempXsig;
+			idft(fourier, tempXsig);
 
 			/*
 			CvPlot::Axes axes = CvPlot::plot(v, "-");
@@ -322,9 +380,9 @@ Mat medianWavelenght(Mat& xSig) { //funzione che usa l'analisi spettrale di four
 			CvPlot::Window window2("fourier", axes2, 480, 640);
 			*/ 
 			
-			Mat der; //matrice della derivata della xSignature locale
+			Mat der; //matrice della derivata della xSignature locale ricalcolata
 
-			Sobel(fourier, der, fourier.depth(), 0, 1);
+			Sobel(tempXsig, der, fourier.depth(), 0, 1);
 			vector<int> maxs; //vettore delle posizioni dei massimi trovati
 			int sum = 0;
 			//cout << "maxs = " << endl;
@@ -370,36 +428,25 @@ Mat medianWavelenght2(Mat& xSig) {
 			for (int k = 0; k < xSig.size[2]; k++) { 
 				v.push_back(xSig.at<double>(i, j, k));
 			}
-			Sobel(v, der, v.depth(), 0, 1);
-			Scalar localMean; //valore medio della xSig locale
-			localMean = mean(v); 
-			vector<int> maxs; //vettore delle posizioni dei massimi trovati
-			int sum = 0;
-			cout << "media = " << localMean[0] << endl;
-			cout << "maxs = " << endl;
-			for (int p = 2; p < 31; p++) { //il primo e l'ultimo valore della derivata sono sempre 0 quindi li escludo
-				bool cond = der.at<double>(p - 1) >= 0 && der.at<double>(p) <= 0 && v.at<double>(p) > localMean[0]; //condizione per la quale un punto è un massimo
-				if (cond) {
-					maxs.push_back(p);
-					cout << p << endl;
-				}				
-			}
+
+			double xSigMean = mean(v)[0];
+			int n = 0;
+			Sobel(v, der, v.depth(), 0, 1, 1);
 			
-			for (int p = 1; p < maxs.size(); p++) {
-				sum += (maxs[p] - maxs[p - 1]);
+			for (int i = 1; i < der.size[0] - 2; i++) {
+				if (der.at<double>(i) > 0 && der.at<double>(i + 1) <= 0 && v.at<double>(i) > xSigMean)
+					n++;
 			}
 
-			if (maxs.size() == 0) 
+			if (n == 0) 
 				medWave.at<double>(i, j) = defaultLenght;
 			else {
-				float med = sum / maxs.size();
+				double med = v.size[0] / n;
 				if (med < 1)
 					med = 1;
 				medWave.at<double>(i, j) = med; //larghezza media locale del blocco 16x16 (i, j)
-				cout << "larghezza media locale = " << med << endl;
+				cout << "larghezza media locale = " << v.size[0] << " / " << n << " = " << med << endl;
 			}
-			
-
 			
 			/*
 			CvPlot::Axes axes = CvPlot::plot(v, "-");
@@ -414,22 +461,50 @@ Mat medianWavelenght2(Mat& xSig) {
 	return medWave;
 }
 
-/*
-//funzione che calcola le frequenze e stima quelle non calcolabili
-Mat frequency(Mat& medianLenght) {
-	Mat freq(medianLenght.rows, medianLenght.cols, CV_64F);
-	freq = -1;
-	double val;
-	for (auto it = medianLenght.begin<double>(), end = medianLenght.end<double>(), itFreq = freq.begin<double>(); it != end; ++it, ++itFreq) {
-		val = 1 / *it;
-		if (val >= 1 / 3 && val <= 1 / 25)
-			*itFreq = val;
+//media con fourier (NON USATA)
+Mat medianWavelenght3(Mat& xSig) {
+	Mat medWave(originalImage.rows / dim, originalImage.cols / dim, CV_64F); //matrice delle dimensioni medie calcolate (dimensione (originalImage.rows / 16) x (originalImage.cols/ 16))
+	int defaultLenght = 4;
+	medWave = defaultLenght;
+
+	for (int i = 2; i < xSig.size[0] - 2; i++) {  //la xSig non è definita per i blocchi che sono distanti a meno di 2 dai limiti esterni
+		for (int j = 2; j < xSig.size[1] - 2; j++) {
+			Mat v; //vettore della xSig locale
+			for (int k = 0; k < xSig.size[2]; k++) {
+				v.push_back(xSig.at<double>(i, j, k));
+
+			}
+			//cout << "(i, j) = (" << i << ", " << j << ") v =" << v << endl;
+			Mat fourier;
+			dft(v, fourier);
+
+			fourier.at<double>(0) = 0;
+
+			int maxIndex = 1;
+			double maxValue = 0;
+			for (int index = 1; index < fourier.size[0]; index++) {
+				if (abs(fourier.at<double>(index)) > maxValue) {
+					maxValue = abs(fourier.at<double>(index));
+					maxIndex = index;
+				}
+			}
+			medWave.at<double>(i, j) = v.size[0] / maxIndex; //calcola la lunghezza media locale delle ridges (dimensione di una semionda della xSig)
+			/*
+			string windowName = "v";
+			CvPlot::Axes axes = CvPlot::plot(v, "-");
+			CvPlot::Window window(windowName, axes, 480, 640);
+
+			string windowName2 = "fourier";
+			CvPlot::Axes axes2 = CvPlot::plot(fourier, "-");
+			CvPlot::Window window2(windowName2, axes2, 480, 640);
+			
+			cout << "MedWave = " << medWave.at<double>(i, j) << endl;
+			window.waitKey(0);
+			*/
+		}
 	}
-
+	return medWave;
 }
-*/
-
-
 
 //funzione che stampa la matrice O delle direzioni delle ridge line in base alla dimensione dell'immagine originale
 //@param windowName = nome della finestra che viene mostrata
@@ -455,10 +530,10 @@ void printField(string windowName, Mat& O) {
 
 	namedWindow(windowName, WINDOW_FREERATIO);
 	imshow(windowName, output);
-	waitKey(10);
+	waitKey(1);
 }
 
-//funzione che stampa i livelli di grigio della xSignature (per debug)
+//funzione che stampa i livelli di grigio della xSignature (per DEBUG)
 //@param xSig = matrice della xSignature (dell'intera immagine)
 //@param O = matrice delle direzioni
 //@param g = immagine normalizzata
@@ -499,181 +574,4 @@ void print_xSig(Mat& xSig, Mat& O, Mat& g) {
 	}
 	
 	
-}
-
-
-
-
-Mat orientedField2_total(Mat& g) {
-	Mat O = orientedField2(g);
-	Mat O_Big(originalImage.rows, originalImage.cols, CV_64FC1);
-	O_Big = 0;
-	
-	for (int i = 0; i < O.rows; i++) {
-		for (int j = 0; j < O.cols; j++) {
-			float val = O.at<double>(i, j);
-			Rect block(j * 16, i * 16, 16, 16);
-			O_Big(block) = O.at<double>(i, j);
-		}
-	}
-	
-	imshow("bigo", O_Big);
-	return O_Big;
-
-}
-
-Mat getFrequency() {
-	float frequency = 0.1;
-	Mat freq = Mat::ones(originalImage.rows, originalImage.cols, CV_32FC1) * frequency;
-	return freq;
-}
-
-Mat filter_ridge(Mat& inputImage, Mat& orientationImage, Mat& frequency) {
-
-	// Fixed angle increment between filter orientations in degrees
-	int angleInc = 3;
-	
-	inputImage.convertTo(inputImage, CV_32FC1);
-	
-	int rows = inputImage.rows;
-	int cols = inputImage.cols;
-
-	orientationImage.convertTo(orientationImage, CV_32FC1);
-	
-	Mat enhancedImage = cv::Mat::zeros(rows, cols, CV_32FC1);
-	vector<int> validr;
-	vector<int> validc;
-
-	
-	frequency.convertTo(frequency, CV_32FC1);
-	double unfreq = frequency.at<float>(1, 1);
-	cout << unfreq << endl;
-	
-	Mat freqindex = Mat::ones(100, 1, CV_32FC1);
-	
-	double kx = 0.8, ky = 0.8;
-	double sigmax = (1 / unfreq) * kx;
-	double sigmax_squared = sigmax * sigmax;
-	double sigmay = (1 / unfreq) * ky;
-	double sigmay_squared = sigmay * sigmay;
-	
-	int szek = (int)round(3 * (std::max(sigmax, sigmay)));
-	
-	Mat meshX, meshY;
-	meshgrid(szek, meshX, meshY);
-
-	Mat refFilter = Mat::zeros(meshX.rows, meshX.cols, CV_32FC1);
-
-	meshX.convertTo(meshX, CV_32FC1);
-	meshY.convertTo(meshY, CV_32FC1);
-
-	double pi_by_unfreq_by_2 = 2 * M_PI * unfreq;
-
-	for (int i = 0; i < meshX.rows; i++) {
-		const float* meshX_i = meshX.ptr<float>(i);
-		const float* meshY_i = meshY.ptr<float>(i);
-		auto* reffilter_i = refFilter.ptr<float>(i);
-		for (int j = 0; j < meshX.cols; j++) {
-			float meshX_i_j = meshX_i[j];
-			float meshY_i_j = meshY_i[j];
-			float pixVal2 = -0.5f * (meshX_i_j * meshX_i_j / sigmax_squared +
-				meshY_i_j * meshY_i_j / sigmay_squared);
-			float pixVal = std::exp(pixVal2);
-			float cosVal = pi_by_unfreq_by_2 * meshX_i_j;
-			reffilter_i[j] = pixVal * std::cos(cosVal);
-		}
-	}
-
-	vector<Mat> filters;
-
-	for (int m = 0; m < 180 / angleInc; m++) {
-		double angle = -(m * angleInc + 90);
-		Mat rot_mat =
-			getRotationMatrix2D(Point((float)(refFilter.rows / 2.0F),
-				(float)(refFilter.cols / 2.0F)),
-				angle, 1.0);
-		Mat rotResult;
-		warpAffine(refFilter, rotResult, rot_mat, refFilter.size());
-		filters.push_back(rotResult);
-	}
-
-	// Find indices of matrix points greater than maxsze from the image boundary
-	int maxsze = szek;
-	// Convert orientation matrix values from radians to an index value that
-	// corresponds to round(degrees/angleInc)
-	int maxorientindex = std::round(180 / angleInc);
-
-	Mat orientindex(rows, cols, CV_32FC1);
-
-	int rows_maxsze = rows - maxsze;
-	int cols_maxsze = cols - maxsze;
-
-	for (int y = 0; y < rows; y++) {
-		const auto* orientationImage_y = orientationImage.ptr<float>(y);
-		auto* orientindex_y = orientindex.ptr<float>(y);
-		for (int x = 0; x < cols; x++) {
-			if (x > maxsze && x < cols_maxsze && y > maxsze && y < rows_maxsze) {
-				validr.push_back(y);
-				validc.push_back(x);
-			}
-
-			int orientpix = static_cast<int>(
-				std::round(orientationImage_y[x] / M_PI * 180 / angleInc));
-
-			if (orientpix < 0) {
-				orientpix += maxorientindex;
-			}
-			if (orientpix >= maxorientindex) {
-				orientpix -= maxorientindex;
-			}
-
-			orientindex_y[x] = orientpix;
-		}
-	}
-
-	// Finally, do the filtering
-	for (int k = 0; k < validr.size(); k++) {
-		int r = validr[k];
-		int c = validc[k];
-
-		Rect roi(c - szek - 1, r - szek - 1, meshX.cols, meshX.rows);
-		Mat subim(inputImage(roi));
-
-		Mat subFilter = filters.at(orientindex.at<float>(r, c));
-		Mat mulResult;
-		multiply(subim, subFilter, mulResult);
-
-		if (sum(mulResult)[0] > 0) {
-			enhancedImage.at<float>(r, c) = 255;
-		}
-	}
-
-	// Add a border.
-	bool addBorder = false;
-	if (addBorder) {
-		enhancedImage.rowRange(0, rows).colRange(0, szek + 1).setTo(255);
-		enhancedImage.rowRange(0, szek + 1).colRange(0, cols).setTo(255);
-		enhancedImage.rowRange(rows - szek, rows).colRange(0, cols).setTo(255);
-		enhancedImage.rowRange(0, rows)
-			.colRange(cols - 2 * (szek + 1) - 1, cols)
-			.setTo(255);
-	}
-
-	return enhancedImage;
-}
-
-void meshgrid(int kernelSize, cv::Mat& meshX, cv::Mat& meshY) {
-	std::vector<int> t;
-
-	for (int i = -kernelSize; i < kernelSize; i++) {
-		t.push_back(i);
-	}
-	
-	cv::Mat gv = cv::Mat(t);
-	int total = gv.total();
-	
-	gv = gv.reshape(1, 1);
-
-	cv::repeat(gv, total, 1, meshX);
-	cv::repeat(gv.t(), 1, total, meshY);
 }

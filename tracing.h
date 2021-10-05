@@ -17,12 +17,14 @@ bool checkHarmonicRatio(cv::Mat& fourier, int maxFourierIndex);
 
 cv::Mat newXSig(cv::Mat& fourier);
 
+cv::Mat newXSig2(cv::Mat& fourier, int n);
+
 int getDeltaC(cv::Mat& xSig);
 
 int getFourierMaxIndex(cv::Mat& fourier);
 
+int getN(cv::Mat& xSig);
+
 cv::Mat getPowerSpectrum(cv::Mat& xSig);
 
 void drawRidges(cv::Mat& finalImage, std::list<cv::Point>& newPoints, std::list<double>& waveLenghts);
-
-void drawRidges2(cv::Mat& finalImage, std::list<cv::Point>& newPoints, std::list<double>& waveLenghts);

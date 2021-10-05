@@ -19,8 +19,8 @@ extern Mat originalImage; //immagine originale (usata solo per le dimensioni)
 extern Mat filteredImage;
 extern Mat medianLenght;
 extern Mat O; //matrice delle orientazioni (oriented field)
-double a = 200; //threshold per la selezione del punto
-double beta1 = 1; //threshold per il seeding (vedi region quality check)
+double a = 230; //threshold per la selezione del punto
+double beta1 = 1.3; //threshold per il seeding (vedi region quality check)
 
 
 //funzione che stabilisce se un punto può essere usato come seed per il tracciamento della ridge
@@ -37,7 +37,6 @@ bool isSeedingPoint(Point p, Mat& finalImage) {
 			return true;
 		//cout << "region quality NOT pass" << endl;
 	}
-	
 	return false;
 }
 
@@ -51,7 +50,8 @@ bool retracingCheck(Point p, Mat& finalImage, double angle, int localLenght) {
 	int T = 0;
 	for (auto it = omega.begin<uchar>(), end = omega.end<uchar>(); it != end; ++it)
 		T += *it;
-	
+	//cout << "T = " << T << endl;
+
 	if (T > 0) //se T > 0 il punto si trova su una ridge già tracciata
 		return false;
 	else 
@@ -85,8 +85,12 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 			maxVal = fourier.at<double>(i);
 		}
 	
+	int n = floor(max / 2); //numero di ridges contenute in una finestra
+	
 	/*
 	//DEBUG
+	cout << "n = " << n << endl;
+	cout << "max = " << max << endl;
 	string windowName = "Fourier";
 	CvPlot::Axes axes = CvPlot::plot(fourier, "-");
 	CvPlot::Window window(windowName, axes, 480, 640);
@@ -102,10 +106,7 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 	namedWindow("omega", WINDOW_FREERATIO);
 	resizeWindow("omega", 250, 100);
 	imshow("omega", omega);
-	cout << "max = " << max << endl;
 	*/
-	int n = floor(max / 2);
-	//cout << "n = " << n << endl;
 	
 	if (n - 2 > 0) {
 		double den = 0; //denominatore per calcolare l'harnomic ratio
@@ -120,10 +121,11 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 			if (PS.at<double>(i) > den)
 				num = PS.at<double>(i);
 
-
 		double HR = num / den; //harmonic ratio
-		//cout << "HR = " << num << " / " << den << " = " << HR << endl;
-		//waitKey(0);
+		/*
+		cout << "HR = " << num << " / " << den << " = " << HR << endl;
+		waitKey(0);
+		*/
 		
 		if (HR > beta1) 
 			return true;
@@ -132,12 +134,12 @@ bool regionQualityCheck(Point p, double angle, int localLenght) {
 	return false;
 }
 
-//funzione per ottenere la finestra orientata sul punto p dall'immagine filtrata
+//funzione per ottenere la finestra orientata sul punto p dall'immagine filtrata (il punto p è sempre al centro)
 Mat getOmega(Point p, double angle, Size windowSize) {
 	float tx, ty; //valori per la traslazione
 	Mat translated_image; //matrice traslata che deve essere ruotata
 	Mat omega; //finestra orientata
-	Point center(filteredImage.cols / 2, filteredImage.rows / 2);
+	Point center(filteredImage.cols / 2, filteredImage.rows / 2); //centro della finestra
 	
 	//valori per la traslazione
 	tx = center.x - p.x;
@@ -146,30 +148,42 @@ Mat getOmega(Point p, double angle, Size windowSize) {
 	Mat translation_matrix = Mat(2, 3, CV_32F, warp_values); //matrice di traslazione
 	warpAffine(filteredImage, translated_image, translation_matrix, filteredImage.size()); //effettuo la traslazione dell'immagine
 	
-	Mat rotation_matix = getRotationMatrix2D(center, - angle / M_PI * 180 + 90, 1.0); //matrice di rotazione
+	Mat rotation_matix = getRotationMatrix2D(center, (- angle / M_PI * 180) + 90, 1.0); //matrice di rotazione
 	warpAffine(translated_image, omega, rotation_matix, translated_image.size()); //effettuo la rotazione dell'immagine
 
+	//Mat rotated = omega.clone(); //per debug
+
 	Range rowRange(center.y - windowSize.height / 2, center.y + windowSize.height / 2 + 1),
-		  colRange(center.x - windowSize.width  / 2, center.x + windowSize.width  / 2 + 1); //range per il taglio (il +1 alla fine è perchè l'ultima riga / colonna non viene inclusa quindi va aggiunta a mano)
+		  colRange(center.x - windowSize.width  / 2, center.x + windowSize.width  / 2 + 1); //range per il taglio (il +1 alla fine è perchè l'ultima riga / colonna non viene inclusa nel Range quindi va aggiunta a mano)
 	omega(rowRange, colRange).copyTo(omega); //effettua il taglio
 	
-											 /*
+	/*
 	//DEBUG
+	circle(rotated, Point(translated_image.cols / 2, translated_image.rows / 2), 10, Scalar(255));
+	imshow("rotated", rotated);
+
 	cout << "rowRange = " << rowRange << endl;
 	cout << "colrange = " << colRange << endl;
-	circle(translated_image, Point(translated_image.cols / 2, translated_image.rows / 2), 2, Scalar(255, 255, 0));
+	circle(translated_image, Point(translated_image.cols / 2, translated_image.rows / 2), 10, Scalar(255));
 
-	namedWindow("translated", WINDOW_FREERATIO);
+	//namedWindow("translated", WINDOW_FREERATIO);
 	imshow("translated", translated_image);
-	resizeWindow("translated", 500, 500);
+	//resizeWindow("translated", 500, 500);
 
 	namedWindow("omega", WINDOW_FREERATIO);
 	imshow("omega", omega);
-	resizeWindow("omega", 500, 500);
+	//resizeWindow("omega", 500, 500);
+
+	Mat original = filteredImage.clone();
+	circle(original, p, 10, Scalar(255));
+
+	namedWindow("original", WINDOW_FREERATIO);
+	imshow("original", original);
 	
 	cout << omega <<endl;
 	waitKey(0);
 	*/
+	
 	
 	return omega;
 }
@@ -186,7 +200,7 @@ Mat getOmega_(Mat& omega) {
 
 	for (auto it = omega_.begin<uchar>(), end = omega_.end<uchar>(); it != end; ++it) //binarizzazione di omega in base al valore medio
 		if (*it < mean)
-			*it = 1;
+			*it = 0;
 		else
 			*it = 255;
 	return omega_;

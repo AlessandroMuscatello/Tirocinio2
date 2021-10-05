@@ -17,19 +17,16 @@ Mat xSignature2(Mat& g, Mat& O);
 
 Mat xSignature3(Mat& g, Mat& O);
 
+Mat xSignature4(Mat& g, Mat& O);
+
+Mat getOrientedWindow(Point p, Mat& g, double angle, Size windowSize);
+
 Mat medianWavelenght(Mat& xSig);
 
 Mat medianWavelenght2(Mat& xSig);
 
+Mat medianWavelenght3(Mat& xSig);
+
 void printField(string windowName, Mat& O);
 
 void print_xSig(Mat& xSig, Mat& O, Mat& g);
-
-
-Mat orientedField2_total(Mat& g);
-
-Mat getFrequency();
-
-Mat filter_ridge(Mat& inputImage, Mat& orientationImage, Mat& frequency);
-
-void meshgrid(int kernelSize, cv::Mat& meshX, cv::Mat& meshY);
