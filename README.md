@@ -12,15 +12,16 @@ Per l'installazione delle librerie si farà riferimento alle guide ufficiali:
 1. Scaricare la libreria dal sito opencv.org e installare la libreria nella cartella C:\(OPENCV FOLDER)\
 2. Aggiungere ai path di sistema C:\(OPENCV FOLDER)\build\x64\vc15\bin
 3. Una volta creato il progetto in Visual Studio aprire le proprietà del progetto.
-(IMG1/2)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto.png)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto2.png)
 4. Andare in Configure Properties/C-C++/Additional Include Directories, premere sulla freccia a destra poi <Edit...>.
-(IMG3)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto3.png)
 5. Cliccare su "New Line" e aggiungere la riga "C:\(OPENCV FOLDER)\build\include". Cliccare OK.
-(IMG4)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto4.png)
 6. Andare in Configure Properties/Linker/General
-(IMG5)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto5.png)
 7. In Additional Dipendencies aggiungere la riga "opencv_world452d.lib". Cliccare OK.
-(IMG6)
+![](https://github.com/AlessandroMuscatello/Tirocinio2/blob/master/doc%20img/propriet%C3%A0%20progetto6.png)
 8. In Additional Library Directory aggiungere la riga "C:\(OPENCV FOLDER)\build\x64\vc15\lib"
 
 ### CVPlot (v. 1.2.1)
